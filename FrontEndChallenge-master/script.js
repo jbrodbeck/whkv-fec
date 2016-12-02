@@ -1,26 +1,8 @@
 var page = {};
 
-page.getProductTemplate = function(callback,url) {
-  $.get('product-template.html', function(data) {
-    page.productTemplate = data;
-    callback(url);
-  });
-}
-
-page.getProducts = function(url) {
-  page.products = [];
-  $.getJSON(url, function(response){
-      for(i=0; i<response.sales.length ; i++){
-        var newProduct = formatProduct(response.sales[i]);
-        page.products.push(newProduct);
-        $("#content").append(newProduct.htmlview);
-      }
-      productsLoaded();
-  });
-  
-  function formatProduct(product) {
+page.formatProduct = function(product, productTemplate) {
     var self          = this;
-    var template      = page.productTemplate;
+    var template      = productTemplate;
     self.description  = product.description;
     self.photo        = product.photos.medium_half;
     self.title        = product.name;
@@ -30,24 +12,32 @@ page.getProducts = function(url) {
     return self;
   }
   
-  function bindCloseButton() {
-    $('.product-container > .close').on('click',function(evt) {
-      var productContainer = $(this).parent()
-      productContainer.addClass('closed');
-      setTimeout(function(){
-        productContainer.hide();
-      },500);
-    });
-  }
-  function productsLoaded() {
-    bindCloseButton();
+page.bindCloseButton = function() {
+  $('.product-container > .close').on('click',function(evt) {
+    var productContainer = $(this).parent()
+    productContainer.addClass('closed');
     setTimeout(function(){
-      $('.loading').css('opacity',0);
-      setTimeout(function() {
-        $('.loading').hide();
-      },500);
-    },1500);
-  }
+      productContainer.hide();
+    },500);
+  });
 }
 
-page.getProductTemplate(page.getProducts,'data.json');
+page.productsLoaded = function() {
+  page.bindCloseButton();
+  setTimeout(function(){
+    $('.loading').css('opacity',0);
+    setTimeout(function() {
+      $('.loading').hide();
+    },500);
+  },1500);
+}
+
+$.when($.get('product-template.html'), $.getJSON('data.json')).done(function(templateData, productData) {
+  page.products = '';
+  for(i=0; i<productData[0].sales.length ; i++){
+    var formattedProduct = page.formatProduct(productData[0].sales[i], templateData[0]);
+    page.products += formattedProduct.htmlview;
+  }
+  $("#content").append(page.products);
+  page.productsLoaded();
+});
